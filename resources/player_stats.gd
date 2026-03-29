@@ -47,6 +47,14 @@ extends Resource
 @export var run_attack_combo_impulse: float = 400.0
 @export_range(0.05, 3.0, 0.05) var run_attack_friction_scale: float = 1.0
 
+@export_subgroup("Dash + attack combo")
+@export_range(0.0, 0.35, 0.01) var dash_attack_grace_time: float = 0.3
+@export var dash_attack_start_frame: int = 1
+@export_range(0.5, 2.5, 0.05) var dash_attack_anim_speed_scale: float = 1.0
+@export_range(0.8, 1.25, 0.01) var dash_attack_velocity_carry: float = 1.0
+@export var dash_attack_combo_impulse: float = 400.0
+@export_range(0.05, 3.0, 0.05) var dash_attack_friction_scale: float = 1.0
+
 @export_group("Animation Names")
 @export var anim_idle: StringName = &"idle"
 @export var anim_walk: StringName = &"walk"

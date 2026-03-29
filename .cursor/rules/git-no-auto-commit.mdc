@@ -1,0 +1,11 @@
+---
+description: User owns git commits; agent never commits unprompted
+alwaysApply: true
+---
+
+# Git: no automatic commits
+
+- **Do not** run `git commit`, `git push`, `git merge`, or create tags unless the **user explicitly asks** for that action in the current message (e.g. “commit this”, “push to origin”).
+- **Do not** commit as part of “finishing” a task or documenting work unless asked.
+- It is fine to run **read-only** git commands when useful: `git status`, `git log`, `git diff`, etc.
+- If changes are ready, summarize what changed and let the user commit with their own message.

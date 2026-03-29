@@ -25,8 +25,9 @@ var attack_playing: bool = false
 var attack_face_locked: bool = false
 var attack_grounded: bool = false
 var attack_impulse_applied: bool = false
-var attack_from_run: bool = false
 var combo_started_from_run: bool = false
+var combo_started_from_dash: bool = false
+var dash_attack_grace_timer: float = 0.0
 
 
 func _ready() -> void:
@@ -78,11 +79,13 @@ func try_jump() -> void:
 			velocity.y = stats.jump_velocity
 			coyote_timer = 0.0
 			jump_buffer_timer = 0.0
+			dash_attack_grace_timer = 0.0
 			state_machine.transition_to("Jump")
 		elif input.jump_just_pressed and air_jumps_used < stats.max_air_jumps:
 			air_jumps_used += 1
 			velocity.y = stats.jump_velocity
 			jump_buffer_timer = 0.0
+			dash_attack_grace_timer = 0.0
 			if state_machine.current_state.name == &"Jump":
 				force_anim(stats.anim_jump_start)
 			else:
@@ -112,6 +115,7 @@ func begin_dash() -> void:
 	dash_dir = dir
 	dash_time = stats.dash_duration
 	dash_ghost_time = 0.0
+	dash_attack_grace_timer = 0.0
 	begin_dash_phase()
 	face_left(dash_dir < 0.0)
 
@@ -138,6 +142,9 @@ func end_dash_phase() -> void:
 func spawn_dash_ghost() -> void:
 	if sprite == null or sprite.sprite_frames == null:
 		return
+	var p := get_parent()
+	if p == null:
+		return
 
 	var ghost := AnimatedSprite2D.new()
 	ghost.sprite_frames = sprite.sprite_frames
@@ -149,15 +156,15 @@ func spawn_dash_ghost() -> void:
 	ghost.scale = sprite.scale
 	ghost.modulate = Color(1, 1, 1, stats.dash_ghost_alpha)
 	ghost.z_index = sprite.z_index - 1
-
-	var parent_node := get_parent()
-	if parent_node == null:
-		return
-	parent_node.add_child(ghost)
+	p.add_child(ghost)
 
 	var tween := ghost.create_tween()
 	tween.tween_property(ghost, "modulate:a", 0.0, stats.dash_ghost_lifetime)
 	tween.finished.connect(ghost.queue_free)
+
+
+func begin_dash_attack_grace() -> void:
+	dash_attack_grace_timer = stats.dash_attack_grace_time
 
 
 func try_attack() -> void:
@@ -168,6 +175,8 @@ func try_attack() -> void:
 
 	if combo_window_timer > 0.0 and combo_step > 0 and combo_step < 3:
 		start_attack(combo_step + 1)
+	elif dash_attack_grace_timer > 0.0:
+		start_dash_attack(false)
 	else:
 		start_attack(1)
 
@@ -178,6 +187,7 @@ func start_attack(step: int) -> void:
 	attack_playing = true
 	attack_grounded = is_on_floor()
 	combo_window_timer = 0.0
+	dash_attack_grace_timer = 0.0
 
 	if combo_step == 1:
 		combo_started_from_run = (
@@ -185,7 +195,7 @@ func start_attack(step: int) -> void:
 			and absf(velocity.x) > stats.run_threshold
 			and input.direction != 0.0
 		)
-	attack_from_run = combo_started_from_run and attack_grounded
+		combo_started_from_dash = false
 
 	if combo_step == 1 and combo_started_from_run:
 		attack_impulse_applied = true
@@ -202,6 +212,30 @@ func start_attack(step: int) -> void:
 	if state_machine.current_state.name != &"Attack":
 		state_machine.transition_to("Attack")
 
+	play_combo_anim()
+
+
+func start_dash_attack(apply_dash_cooldown: bool = true) -> void:
+	dash_time = 0.0
+	dash_attack_grace_timer = 0.0
+	if apply_dash_cooldown and stats.dash_cooldown > 0.0:
+		dash_cd = stats.dash_cooldown
+
+	combo_step = 1
+	attack_buffered = false
+	attack_playing = true
+	attack_grounded = is_on_floor()
+	combo_window_timer = 0.0
+	combo_started_from_run = false
+	combo_started_from_dash = true
+	attack_impulse_applied = true
+	velocity.x = dash_dir * stats.dash_speed * stats.dash_attack_velocity_carry
+
+	face_left(dash_dir < 0.0)
+	if stats.attack_face_lock:
+		attack_face_locked = true
+
+	state_machine.transition_to("Attack")
 	play_combo_anim()
 
 
@@ -227,9 +261,16 @@ func play_combo_anim() -> void:
 			run_frame = stats.run_attack_start_frame_1
 
 	force_anim(anim)
-	if attack_from_run and sprite.sprite_frames != null:
-		var frame_count: int = sprite.sprite_frames.get_frame_count(anim)
-		if frame_count > run_frame:
+	sprite.speed_scale = 1.0
+	if combo_started_from_dash and combo_step == 1:
+		sprite.speed_scale = stats.dash_attack_anim_speed_scale
+		if sprite.sprite_frames != null:
+			var fc: int = sprite.sprite_frames.get_frame_count(anim)
+			if fc > stats.dash_attack_start_frame:
+				sprite.frame = stats.dash_attack_start_frame
+	elif combo_started_from_run and sprite.sprite_frames != null:
+		var fc: int = sprite.sprite_frames.get_frame_count(anim)
+		if fc > run_frame:
 			sprite.frame = run_frame
 
 
@@ -250,6 +291,7 @@ func _on_sprite_animation_finished() -> void:
 
 func _tick_timers(delta: float) -> void:
 	dash_cd = maxf(0.0, dash_cd - delta)
+	dash_attack_grace_timer = maxf(0.0, dash_attack_grace_timer - delta)
 	coyote_timer = maxf(0.0, coyote_timer - delta)
 	jump_buffer_timer = maxf(0.0, jump_buffer_timer - delta)
 
@@ -258,6 +300,7 @@ func _tick_timers(delta: float) -> void:
 		if combo_window_timer <= 0.0:
 			combo_step = 0
 			combo_started_from_run = false
+			combo_started_from_dash = false
 
 
 func _update_coyote() -> void:
@@ -272,18 +315,14 @@ func _update_coyote() -> void:
 
 
 func play_anim(anim_name: StringName) -> void:
-	if sprite == null:
-		return
-	if sprite.sprite_frames != null and not sprite.sprite_frames.has_animation(anim_name):
+	if sprite == null or sprite.sprite_frames == null or not sprite.sprite_frames.has_animation(anim_name):
 		return
 	if sprite.animation != anim_name:
 		sprite.play(anim_name)
 
 
 func force_anim(anim_name: StringName) -> void:
-	if sprite == null:
-		return
-	if sprite.sprite_frames != null and not sprite.sprite_frames.has_animation(anim_name):
+	if sprite == null or sprite.sprite_frames == null or not sprite.sprite_frames.has_animation(anim_name):
 		return
 	sprite.play(anim_name)
 

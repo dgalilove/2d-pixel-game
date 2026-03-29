@@ -10,6 +10,10 @@ func exit() -> void:
 
 
 func update(delta: float) -> void:
+	if input.attack_just_pressed:
+		player.start_dash_attack()
+		return
+
 	player.dash_time = maxf(0.0, player.dash_time - delta)
 	player.dash_ghost_time = maxf(0.0, player.dash_ghost_time - delta)
 
@@ -24,6 +28,7 @@ func update(delta: float) -> void:
 		player.velocity.x = player.dash_dir * stats.dash_speed * stats.dash_end_speed_ratio
 		if stats.dash_cooldown > 0.0:
 			player.dash_cd = stats.dash_cooldown
+		player.begin_dash_attack_grace()
 		machine.transition_to("Fall" if not player.is_on_floor() else "Idle")
 
 

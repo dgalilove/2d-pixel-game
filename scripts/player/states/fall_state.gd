@@ -20,7 +20,9 @@ func post_move(_delta: float) -> void:
 			machine.transition_to("Idle")
 		return
 
-	if player.velocity.y > stats.jump_apex_epsilon:
+	if player.dash_attack_grace_timer > 0.0:
+		player.play_anim(stats.anim_dash)
+	elif player.velocity.y > stats.jump_apex_epsilon:
 		player.play_anim(stats.anim_jump_fall)
 	else:
 		player.play_anim(stats.anim_jump_middle)
