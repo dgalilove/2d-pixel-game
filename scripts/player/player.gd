@@ -286,7 +286,7 @@ func _on_sprite_animation_finished() -> void:
 		return
 
 	combo_window_timer = stats.combo_window_time
-	state_machine.transition_to("Fall" if not is_on_floor() else "Idle")
+	state_machine.transition_to("Jump" if not is_on_floor() else "Idle")
 
 
 func _tick_timers(delta: float) -> void:

@@ -15,7 +15,7 @@ func post_move(_delta: float) -> void:
 	if absf(input.direction) > 0.0:
 		machine.transition_to("Move")
 	elif not player.is_on_floor():
-		machine.transition_to("Fall")
+		machine.transition_to("Jump")
 	elif player.dash_attack_grace_timer > 0.0:
 		player.play_anim(stats.anim_dash)
 	else:

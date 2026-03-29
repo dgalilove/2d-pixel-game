@@ -21,4 +21,4 @@ func post_move(_delta: float) -> void:
 		else:
 			player.play_anim(stats.anim_walk)
 	else:
-		machine.transition_to("Fall")
+		machine.transition_to("Jump")

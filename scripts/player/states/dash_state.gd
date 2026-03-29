@@ -29,7 +29,7 @@ func update(delta: float) -> void:
 		if stats.dash_cooldown > 0.0:
 			player.dash_cd = stats.dash_cooldown
 		player.begin_dash_attack_grace()
-		machine.transition_to("Fall" if not player.is_on_floor() else "Idle")
+		machine.transition_to("Jump" if not player.is_on_floor() else "Idle")
 
 
 func post_move(_delta: float) -> void:
