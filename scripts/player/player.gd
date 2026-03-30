@@ -44,6 +44,8 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 
+	_check_air_attack_cancel_on_land()
+
 	state_machine.post_move(delta)
 
 
@@ -165,6 +167,20 @@ func spawn_dash_ghost() -> void:
 
 func begin_dash_attack_grace() -> void:
 	dash_attack_grace_timer = stats.dash_attack_grace_time
+
+
+func _check_air_attack_cancel_on_land() -> void:
+	if state_machine.current_state.name != &"Attack":
+		return
+	if not attack_playing:
+		return
+	if attack_grounded:
+		return
+	if not is_on_floor():
+		return
+
+	combo_window_timer = stats.combo_window_time
+	state_machine.transition_to("Idle")
 
 
 func try_attack() -> void:

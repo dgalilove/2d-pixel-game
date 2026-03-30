@@ -19,7 +19,7 @@ extends Resource
 
 @export_group("Dash")
 @export var dash_duration: float = 0.25
-@export var dash_speed: float = 400.0
+@export var dash_speed: float = 500.0
 @export var dash_end_speed_ratio: float = 0.08
 @export var dash_cooldown: float = 0.3
 @export var dash_in_air: bool = true
