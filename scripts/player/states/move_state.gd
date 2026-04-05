@@ -1,8 +1,11 @@
 extends PlayerState
 
 
-func update(delta: float) -> void:
+func enter() -> void:
 	player.dash_attack_grace_timer = 0.0
+
+
+func update(delta: float) -> void:
 	player.apply_horizontal(delta, 1.0)
 	player.try_jump()
 	player.try_dash()

@@ -2,9 +2,15 @@ extends CharacterBody2D
 
 @export var stats: PlayerStats
 
-@onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
+@onready var pivot: Node2D = $Pivot
+@onready var sprite: AnimatedSprite2D = $Pivot/AnimatedSprite2D
 @onready var input: InputHandler = $InputHandler
 @onready var state_machine: StateMachine = $StateMachine
+@onready var hurtbox: Area2D = $Hurtbox
+@onready var hitbox_shape: CollisionShape2D = $Pivot/Hitbox/CollisionShape2D
+
+@export var max_health: int = 100
+var current_health: int
 
 var dash_time: float = 0.0
 var dash_cd: float = 0.0
@@ -33,6 +39,8 @@ var dash_attack_grace_timer: float = 0.0
 func _ready() -> void:
 	sprite.animation_finished.connect(_on_sprite_animation_finished)
 	state_machine.setup(self, input, stats)
+
+	current_health = max_health
 
 
 func _physics_process(delta: float) -> void:
@@ -155,7 +163,7 @@ func spawn_dash_ghost() -> void:
 	ghost.speed_scale = 0.0
 	ghost.global_position = global_position
 	ghost.global_rotation = global_rotation
-	ghost.scale = sprite.scale
+	ghost.scale = pivot.scale if pivot != null else sprite.scale
 	ghost.modulate = Color(1, 1, 1, stats.dash_ghost_alpha)
 	ghost.z_index = sprite.z_index - 1
 	p.add_child(ghost)
@@ -179,6 +187,8 @@ func _check_air_attack_cancel_on_land() -> void:
 	if not is_on_floor():
 		return
 
+	combo_step = 0
+	attack_playing = false
 	combo_window_timer = stats.combo_window_time
 	state_machine.transition_to("Idle")
 
@@ -228,6 +238,9 @@ func start_attack(step: int) -> void:
 	if state_machine.current_state.name != &"Attack":
 		state_machine.transition_to("Attack")
 
+	if hitbox_shape:
+		hitbox_shape.set_deferred("disabled", false)
+
 	play_combo_anim()
 
 
@@ -251,7 +264,12 @@ func start_dash_attack(apply_dash_cooldown: bool = true) -> void:
 	if stats.attack_face_lock:
 		attack_face_locked = true
 
-	state_machine.transition_to("Attack")
+	if state_machine.current_state.name != &"Attack":
+		state_machine.transition_to("Attack")
+
+	if hitbox_shape:
+		hitbox_shape.set_deferred("disabled", false)
+
 	play_combo_anim()
 
 
@@ -333,7 +351,7 @@ func _update_coyote() -> void:
 func play_anim(anim_name: StringName) -> void:
 	if sprite == null or sprite.sprite_frames == null or not sprite.sprite_frames.has_animation(anim_name):
 		return
-	if sprite.animation != anim_name:
+	if sprite.animation != anim_name or not sprite.is_playing():
 		sprite.play(anim_name)
 
 
@@ -344,15 +362,27 @@ func force_anim(anim_name: StringName) -> void:
 
 
 func face_left(is_left: bool) -> void:
-	if sprite == null:
+	if pivot == null:
 		return
-	var mag: float = absf(sprite.scale.x)
+	var mag: float = absf(pivot.scale.x)
 	if mag < 0.0001:
 		mag = 1.0
-	sprite.scale.x = -mag if is_left else mag
+	pivot.scale.x = -mag if is_left else mag
 
 
 func facing_sign() -> float:
-	if sprite == null:
+	if pivot == null:
 		return 1.0
-	return -1.0 if sprite.scale.x < 0.0 else 1.0
+	return -1.0 if pivot.scale.x < 0.0 else 1.0
+
+
+func _on_hurtbox_received_damage(amount: int) -> void:
+	current_health -= amount
+	print("Hero took damage! HP: ", current_health)
+
+	if current_health <= 0:
+		die()
+
+
+func die() -> void:
+	queue_free()

@@ -1,7 +1,15 @@
 extends PlayerState
 
 
+func enter() -> void:
+	if player.hitbox_shape:
+		player.hitbox_shape.set_deferred("disabled", false)
+
+
 func exit() -> void:
+	if player.hitbox_shape:
+		player.hitbox_shape.set_deferred("disabled", true)
+
 	player.attack_playing = false
 	player.attack_face_locked = false
 	player.attack_buffered = false
